@@ -130,7 +130,7 @@ class MinmaxLexWolf(LexWolfCore):
 
         return best_move
 
-       def find_optimal_movebis(self, board=chess.Board(), bitBrd=bitBoard.bitBoard()):
+    def find_optimal_movebis(self, board=chess.Board(), bitBrd=bitBoard.bitBoard()):
         self.start_time = time()
         legal_moves = list(board.legal_moves)
         shuffle(legal_moves)

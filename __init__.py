@@ -30,6 +30,7 @@ class Game():
 
     def AImove(self, AI):
         next_move = AI.find_optimal_move(self.board)
+        # next_move = AI.find_optimal_movebis(self.board, self.bitBrd)
         if next_move in self.board.legal_moves:
             self.load_move_in_memory(next_move)
             self.play_move(next_move)

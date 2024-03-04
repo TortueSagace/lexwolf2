@@ -129,6 +129,37 @@ class MinmaxLexWolf(LexWolfCore):
 
         return best_move
 
+       def find_optimal_movebis(self, board=chess.Board(), bitBrd=bitBoard.bitBoard()):
+        self.start_time = time()
+        legal_moves = list(board.legal_moves)
+        shuffle(legal_moves)
+        best_move = legal_moves[0]
+        best_value = float('-inf') if board.turn == chess.WHITE else float('inf')
+        alpha = float('-inf')
+        beta = float('inf')
+
+        for move in legal_moves:
+            if time() - self.start_time > self.max_thinking_time:
+                break
+            board.push(move)
+            self.combinations_count = 1
+            board_value = self.minimax(board, self.max_depth - 1, alpha, beta, not board.turn)
+            board.pop()
+            r = randrange(2)
+
+            if board.turn == chess.WHITE:
+                if board_value > best_value or (board_value == best_value and r == 0):
+                    best_value = board_value
+                    best_move = move
+                    alpha = max(alpha, best_value)  # Update alpha
+            else:
+                if board_value < best_value or (board_value == best_value and r == 0):
+                    best_value = board_value
+                    best_move = move
+                    beta = min(beta, best_value)  # Update beta
+
+        return best_move
+
     def safe_move(self, previous_move, new_move, board):
         if new_move in board.legal_moves:
             return new_move

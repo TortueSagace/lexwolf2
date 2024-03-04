@@ -17,6 +17,7 @@ class Game():
         self.AIwhite = AIwhite  # type LexWolfCore
         self.AIblack = AIblack
         self.board = chess.Board()
+        self.bitBrd = bitBoard(self.board)             
         self.move_memory = []
         self.max_moves = max_moves  # stops the game if > max_moves, inactive if set on "None"
         self.move_count = 0

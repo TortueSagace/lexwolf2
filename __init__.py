@@ -2,6 +2,7 @@ import chess
 import chess.svg
 from random import shuffle
 from lexwolf.minmax import DummyLexWolf, LexWolfCore
+from bitBoard import bitBoard
 from IPython.display import display, SVG
 
 

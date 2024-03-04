@@ -4,6 +4,7 @@ import chess
 from random import shuffle, seed, randrange, choices, random
 import numpy as np
 from lexwolf.core import LexWolfCore
+from bitBoard import bitBoard
 
 
 class MinmaxLexWolf(LexWolfCore):

@@ -132,20 +132,21 @@ class MinmaxLexWolf(LexWolfCore):
 
     def find_optimal_movebis(self, board=chess.Board(), bitBrd=bitBoard.bitBoard()):
         self.start_time = time()
-        legal_moves = list(board.legal_moves)
-        shuffle(legal_moves)
-        best_move = legal_moves[0]
         best_value = float('-inf') if board.turn == chess.WHITE else float('inf')
         alpha = float('-inf')
         beta = float('inf')
+
+        legal_moves = list(board.legal_moves)
 
         for move in legal_moves:
             if time() - self.start_time > self.max_thinking_time:
                 break
             board.push(move)
+            bitBrd.setList(board)
             self.combinations_count = 1
-            board_value = self.minimax(board, self.max_depth - 1, alpha, beta, not board.turn)
+            board_value = self.alphabeta(board, bitBrd, alpha, beta, not board.turn,1)
             board.pop()
+            bitBrd.setList(board)
             r = randrange(2)
 
             if board.turn == chess.WHITE:
@@ -160,6 +161,36 @@ class MinmaxLexWolf(LexWolfCore):
                     beta = min(beta, best_value)  # Update beta
 
         return best_move
+    
+    def alphabeta(self, board, bitBrd, alpha, beta, MAX, depth):
+        legal_moves = list(board.legal_moves)
+        if(depth==self.max_depth):
+            return bitBrd.getEval()
+        else:
+            if(MAX==True):
+               v = float('-inf')
+               for move in legal_moves:
+                   board.push(move)
+                   bitBrd.setList(board)
+                   v = max(v,self.alphabeta(board, bitBrd, alpha, beta, not MAX, depth+1))
+                   if(v>=beta):
+                       return v
+                   alpha = max(alpha,v)
+                   board.pop()
+                   bitBrd.setList(board)
+            else:    
+                v = float('inf')
+                for move in legal_moves:
+                   board.push(move)
+                   bitBrd.setList(board)
+                   v = min(v,self.alphabeta(board, bitBrd, alpha, beta, not MAX, depth+1))
+                   if(v<=alpha):
+                       return v
+                   beta = min(beta,v)
+                   board.pop()
+                   bitBrd.setList(board)
+            
+
 
     def safe_move(self, previous_move, new_move, board):
         if new_move in board.legal_moves:

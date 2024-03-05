@@ -1,10 +1,13 @@
 import chess
 import numpy as np
+from weights import WEIGHTS
 
 class bitBoard:
 
     def __init__(self,board=None):
         self.__list = np.asarray([None]*(768+5)) # private 772-bits bit array: 64*6*2 + 5 ~ 64 cases for each piece of each color plus side to move & castling rights
+        self.__pieceswght = np.asarray([None]*(768+5))
+        self.setWeights()
 
         if(board==None): # no board provided, initial board is supposed
             temp = chess.Board()
@@ -14,6 +17,12 @@ class bitBoard:
 
     def getList(self):
         return self.__list
+    
+    def getWeighted(self):
+        return self.__list*self.__pieceswght
+
+    def getEval(self):
+        return np.sum(self.getWeighted())
 
     def setList(self,board):
             # Dictionary to map piece colors to their index for bitboard representation
@@ -32,4 +41,17 @@ class bitBoard:
             self.__list[-2] = BOOL_BIN[board.has_kingside_castling_rights(chess.BLACK)]
             self.__list[-1] = BOOL_BIN[board.has_queenside_castling_rights(chess.BLACK)]
 
+    def setWeights(self):        
+        self.__pieceswght[0:64] = np.asarray([WEIGHTS['PAWN_VALUE']]*64)
+        self.__pieceswght[64:128] = np.asarray([WEIGHTS['KNIGHT_VALUE']]*64)
+        self.__pieceswght[128:192] = np.asarray([WEIGHTS['BISHOP_VALUE']]*64)
+        self.__pieceswght[192:256] = np.asarray([WEIGHTS['ROOK_VALUE']]*64)
+        self.__pieceswght[256:320] = np.asarray([WEIGHTS['QUEEN_VALUE']]*64)
+        self.__pieceswght[320:384] = np.asarray([0]*64)
+        self.__pieceswght[384:448] = np.asarray([-WEIGHTS['PAWN_VALUE']]*64)
+        self.__pieceswght[448:512] = np.asarray([-WEIGHTS['KNIGHT_VALUE']]*64)
+        self.__pieceswght[512:576] = np.asarray([-WEIGHTS['BISHOP_VALUE']]*64)
+        self.__pieceswght[576:640] = np.asarray([-WEIGHTS['ROOK_VALUE']]*64)
+        self.__pieceswght[640:704] = np.asarray([-WEIGHTS['QUEEN_VALUE']]*64)
+        self.__pieceswght[704:773] = np.asarray([0]*69)
 

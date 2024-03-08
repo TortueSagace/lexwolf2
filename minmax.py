@@ -146,7 +146,7 @@ class MinmaxLexWolf(LexWolfCore):
             board.push(move)
             bitBrd.setList(board)
             self.combinations_count = 1
-            board_value = self.alphabeta(board, bitBrd, alpha, beta, not board.turn,1)
+            board_value = self.alphabeta(board, bitBrd, alpha, beta, not board.turn,self.max_depth)
             board.pop()
             bitBrd.setList(board)
             r = randrange(2)

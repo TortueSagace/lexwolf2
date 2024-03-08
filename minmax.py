@@ -162,33 +162,34 @@ class MinmaxLexWolf(LexWolfCore):
 
         return best_move
     
-    def alphabeta(self, board, bitBrd, alpha, beta, MAX, depth):
-        legal_moves = list(board.legal_moves)
-        if(depth==self.max_depth):
-            return bitBrd.getEval()
-        else:
+    def alphabeta(self,board, bitBrd, alpha, beta, MAX, depth):
+        if(depth==0):
+            bitBrd.setList(board)
+            res = bitBrd.getEval()
+            return res
+        else: 
+            legal_moves = list(board.legal_moves)
             if(MAX==True):
                v = float('-inf')
                for move in legal_moves:
                    board.push(move)
-                   bitBrd.setList(board)
-                   v = max(v,self.alphabeta(board, bitBrd, alpha, beta, not MAX, depth+1))
+                   vp = self.alphabeta(board, bitBrd, alpha, beta, not MAX, depth-1)
+                   v = v if v>vp else vp
+                   board.pop()
                    if(v>=beta):
                        return v
-                   alpha = max(alpha,v)
-                   board.pop()
-                   bitBrd.setList(board)
+                   alpha = alpha if alpha>v else v
             else:    
                 v = float('inf')
                 for move in legal_moves:
                    board.push(move)
-                   bitBrd.setList(board)
-                   v = min(v,self.alphabeta(board, bitBrd, alpha, beta, not MAX, depth+1))
+                   vp = self.alphabeta(board, bitBrd, alpha, beta, not MAX, depth-1)
+                   v = v if v<vp else vp
+                   board.pop()
                    if(v<=alpha):
                        return v
-                   beta = min(beta,v)
-                   board.pop()
-                   bitBrd.setList(board)
+                   beta = beta if beta<v else v
+        return v
             
 
 

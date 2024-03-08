@@ -2,7 +2,7 @@ from time import time
 
 import chess
 from random import shuffle, randrange
-from lexwolf.core import LexWolfCore
+from core import LexWolfCore
 from bitBoard import bitBoard
 
 
@@ -15,51 +15,30 @@ class MinmaxLexWolf(LexWolfCore):
         self.check_bonus = check_bonus
         self.start_time = time()
 
-    def evaluate(self, board):
-        # Standard piece values
-        piece_values = {chess.PAWN: 1, chess.KNIGHT: 3, chess.BISHOP: 3,
-                        chess.ROOK: 5, chess.QUEEN: 9, chess.KING: 0}
-        center_squares = [chess.D4, chess.E4, chess.D5, chess.E5]
-        king_safety_squares = [chess.A1, chess.A8, chess.H1, chess.H8]
+    def evaluate(self, board, bitBrd):
 
         # Initial score
         score = 0
 
         # Material and positional score
-        for piece_type in piece_values:
-            for square in board.pieces(piece_type, chess.WHITE):
-                score += piece_values[piece_type]
-                if square in center_squares:
-                    score += self.center_bonus  # Central control bonus
-            for square in board.pieces(piece_type, chess.BLACK):
-                score -= piece_values[piece_type]
-                if square in center_squares:
-                    score -= self.center_bonus  # Central control bonus
-
-        # King safety
-        if self.king_bonus:
-            for square in board.pieces(chess.KING, chess.WHITE):
-                if square in king_safety_squares:
-                    score += self.king_bonus  # King safety bonus
-            for square in board.pieces(chess.KING, chess.BLACK):
-                if square in king_safety_squares:
-                    score -= self.king_bonus  # King safety bonus
+        bitBrd.setList(board)
+        score = bitBrd.getEval()
 
         # Checkmate and stalemate
         if board.is_checkmate():
             if board.turn:
-                score -= 1000  # Black wins
+                score -= 100000  # Black wins
             else:
-                score += 1000  # White wins
+                score += 100000  # White wins
         elif board.is_stalemate() or board.is_insufficient_material() or board.can_claim_draw():
             score = 0  # Draw
 
         # Add control bonus
-        if self.control_bonus:
-            white_control = self.count_controlled_squares(board, chess.WHITE)
-            black_control = self.count_controlled_squares(board, chess.BLACK)
-            score += self.control_bonus * sum(white_control.values())
-            score -= self.control_bonus * sum(black_control.values())
+        #if self.control_bonus:
+        #    white_control = self.count_controlled_squares(board, chess.WHITE)
+        #    black_control = self.count_controlled_squares(board, chess.BLACK)
+        #    score += self.control_bonus * sum(white_control.values())
+        #    score -= self.control_bonus * sum(black_control.values())
 
         # Add check bonus
         if self.check_bonus and board.is_check():
@@ -67,9 +46,9 @@ class MinmaxLexWolf(LexWolfCore):
 
         return score
 
-    def minimax(self, board, depth, alpha, beta, is_maximizing):
+    def minimax(self, board, depth, alpha, beta, is_maximizing, bitBrd):
         if depth == 0 or board.is_game_over():
-            return self.evaluate(board)
+            return self.evaluate(board, bitBrd)
 
         if is_maximizing:
             max_eval = float('-inf')
@@ -77,11 +56,11 @@ class MinmaxLexWolf(LexWolfCore):
                 if time() - self.start_time > self.max_thinking_time:
                     break
                 board.push(move)
-                eval = self.minimax(board, depth - 1, alpha, beta, False)
+                eval = self.minimax(board, depth - 1, alpha, beta, False, bitBrd)
                 board.pop()
                 max_eval = max(max_eval, eval)
-                alpha = max(alpha, eval)
-                if beta <= alpha:
+                alpha = max(alpha, max_eval)
+                if alpha >= beta:
                     break  # Beta cut-off
             return max_eval
         else:
@@ -90,65 +69,31 @@ class MinmaxLexWolf(LexWolfCore):
                 if time() - self.start_time > self.max_thinking_time:
                     break
                 board.push(move)
-                eval = self.minimax(board, depth - 1, alpha, beta, True)
+                eval = self.minimax(board, depth - 1, alpha, beta, True, bitBrd)
                 board.pop()
                 min_eval = min(min_eval, eval)
-                beta = min(beta, eval)
+                beta = min(beta, min_eval)
                 if beta <= alpha:
-                    break  # Alpha cut-off
+                    break  # Alpha cut-off                
             return min_eval
 
-    def find_optimal_move_before(self, board=chess.Board()):
-        self.start_time = time()
-        legal_moves = list(board.legal_moves)
-        shuffle(legal_moves)
-        best_move = legal_moves[0]
-        best_value = float('-inf') if board.turn == chess.WHITE else float('inf')
-        alpha = float('-inf')
-        beta = float('inf')
-
-        for move in legal_moves:
-            if time() - self.start_time > self.max_thinking_time:
-                break
-            board.push(move)
-            self.combinations_count = 1
-            board_value = self.minimax(board, self.max_depth - 1, alpha, beta, not board.turn)
-            board.pop()
-            r = randrange(2)
-
-            if board.turn == chess.WHITE:
-                if board_value > best_value or (board_value == best_value and r == 0):
-                    best_value = board_value
-                    best_move = move
-                    alpha = max(alpha, best_value)  # Update alpha
-            else:
-                if board_value < best_value or (board_value == best_value and r == 0):
-                    best_value = board_value
-                    best_move = move
-                    beta = min(beta, best_value)  # Update beta
-
-        return best_move
-
     def find_optimal_move(self, board=chess.Board(), bitBrd=bitBoard()):
+        turn = board.turn
         self.start_time = time()
         legal_moves = list(board.legal_moves)
         shuffle(legal_moves)
         best_move = legal_moves[0]
-        best_value = float('-inf') if board.turn == chess.WHITE else float('inf')
+        best_value = float('-inf') if turn == chess.WHITE else float('inf')
         alpha = float('-inf')
         beta = float('inf')
-
-        legal_moves = list(board.legal_moves)
 
         for move in legal_moves:
             if time() - self.start_time > self.max_thinking_time:
                 break
             board.push(move)
-            bitBrd.setList(board)
             self.combinations_count = 1
-            board_value = self.alphabeta(board, bitBrd, alpha, beta, not board.turn,self.max_depth)
+            board_value = self.minimax(board, self.max_depth - 1, alpha, beta, not turn,bitBrd)
             board.pop()
-            bitBrd.setList(board)
             r = randrange(2)
 
             if board.turn == chess.WHITE:
@@ -163,38 +108,7 @@ class MinmaxLexWolf(LexWolfCore):
                     beta = min(beta, best_value)  # Update beta
 
         return best_move
-    
-    def alphabeta(self,board, bitBrd, alpha, beta, MAX, depth):
-        if(depth==0):
-            bitBrd.setList(board)
-            res = bitBrd.getEval()
-            return res
-        else: 
-            legal_moves = list(board.legal_moves)
-            if(MAX==True):
-               v = float('-inf')
-               for move in legal_moves:
-                   board.push(move)
-                   vp = self.alphabeta(board, bitBrd, alpha, beta, not MAX, depth-1)
-                   v = v if v>vp else vp
-                   board.pop()
-                   if(v>=beta):
-                       return v
-                   alpha = alpha if alpha>v else v
-            else:    
-                v = float('inf')
-                for move in legal_moves:
-                   board.push(move)
-                   vp = self.alphabeta(board, bitBrd, alpha, beta, not MAX, depth-1)
-                   v = v if v<vp else vp
-                   board.pop()
-                   if(v<=alpha):
-                       return v
-                   beta = beta if beta<v else v
-        return v
-            
-
-
+        
     def safe_move(self, previous_move, new_move, board):
         if new_move in board.legal_moves:
             return new_move

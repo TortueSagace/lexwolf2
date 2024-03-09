@@ -32,9 +32,9 @@ class TestLexWolf(unittest.TestCase):
         for SEED in tqdm(range(n_games)):
             game = Game(False, False,
                             DummyLexWolf(random_seed=SEED),
-                            MinmaxLexWolf(random_seed=SEED, max_depth=1, center_bonus=0), silence=True)
+                            MinmaxLexWolf(random_seed=SEED, max_depth=2, center_bonus=0), silence=True)
             win_ratio += game.result
-            print("Win ratio so far is", round(win_ratio / (SEED + 1), 2), "%")
+            print("Win ratio so far is", round(win_ratio / (SEED + 1), 2)*100, "%")
         print(
             f"Win ratio between DummyLexWolf (white) and MinmaxLexWolf with depth 1 (black) over {n_games} games: {win_ratio}")
 

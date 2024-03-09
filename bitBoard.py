@@ -33,103 +33,41 @@ class bitBoard:
         return a1*np.sum(self.getWeighted()) + a2*self.bishopCtl() + a3*self.queenCtl() + a4*self.rookCtl()
     
     def bishopCtl(self):
-        res = 0
-        al = 1/2 # allied control
-        en = 1/2 # ennemy control
         weighted = self.getWeighted()
-        if(self.board.turn != chess.WHITE): # just pushed a white move, must evaluate the board wrt to white's perspective
-            bishops = self.__list[2*64:3*64]
-            weighted[2*64:3*64] = np.asarray([0]*64) 
-            sponge = self.sponge(weighted)
-            allied = (sponge + abs(sponge))/2
-            ennemy = (-sponge + abs(sponge))/2
-            conva = np.asarray(64*[0])
-            conve = np.asarray(64*[0])
-            for i in range(64):
-                conva[i] = self.strEl.Bp[i]@allied
-                conve[i] = self.strEl.Bp[i]@ennemy
-            res = (al*conva+en*conve)@bishops
-
-        else:    
-            bishops = self.__list[8*64:9*64]
-            weighted[8*64:9*64] = np.asarray([0]*64)             
-            sponge = self.sponge(weighted)
-            allied = (-sponge + abs(sponge))/2
-            ennemy = (sponge + abs(sponge))/2
-            conva = np.asarray(64*[0])
-            conve = np.asarray(64*[0])
-            for i in range(64):
-                conva[i] = self.strEl.Bp[i]@allied
-                conve[i] = self.strEl.Bp[i]@ennemy
-            res = -(al*conva+en*conve)@bishops
-
-        return res
+        sponge = abs(self.sponge(weighted))
+        conv = np.asarray(64*[0])
+        for i in range(64):
+            conv[i] = self.strEl.Bp[i]@sponge
+  
+        wbishops = self.__list[2*64:3*64]
+        bbishops = -self.__list[8*64:9*64]
+        
+        return (wbishops+bbishops)@conv
     
     def queenCtl(self): 
-        res = 0
-        al = 1/2 # allied control
-        en = 1/2 # ennemy control
         weighted = self.getWeighted()
-        if(self.board.turn != chess.WHITE): # just pushed a white move, must evaluate the board wrt to white's perspective
-            queen = self.__list[4*64:5*64]
-            weighted[4*64:5*64] = np.asarray([0]*64) 
-            sponge = self.sponge(weighted)
-            allied = (sponge + abs(sponge))/2
-            ennemy = (-sponge + abs(sponge))/2
-            conva = np.asarray(64*[0])
-            conve = np.asarray(64*[0])
-            for i in range(64):
-                conva[i] = self.strEl.Qn[i]@allied
-                conve[i] = self.strEl.Qn[i]@ennemy
-            res = (al*conva+en*conve)@queen
+        sponge = abs(self.sponge(weighted))
+        conv = np.asarray(64*[0])
+        for i in range(64):
+            conv[i] = self.strEl.Qn[i]@sponge
+  
+        wqueen = self.__list[4*64:5*64]
+        bqueen = -self.__list[10*64:11*64]
+        
+        return (wqueen+bqueen)@conv
+    
 
-        else:    
-            queen = self.__list[10*64:11*64]
-            weighted[10*64:11*64] = np.asarray([0]*64)         
-            sponge = self.sponge(weighted)
-            allied = (-sponge + abs(sponge))/2
-            ennemy = (sponge + abs(sponge))/2
-            conva = np.asarray(64*[0])
-            conve = np.asarray(64*[0])
-            for i in range(64):
-                conva[i] = self.strEl.Qn[i]@allied
-                conve[i] = self.strEl.Qn[i]@ennemy
-            res = -(al*conva+en*conve)@queen
-            
-        return res 
-
-    def rookCtl(self):      
-        res = 0
-        al = 1/2 # allied control
-        en = 1/2 # ennemy control
+    def rookCtl(self):   
         weighted = self.getWeighted()
-        if(self.board.turn != chess.WHITE): # just pushed a white move, must evaluate the board wrt to white's perspective
-            rooks = self.__list[3*64:4*64]
-            weighted[3*64:4*64] = np.asarray([0]*64) 
-            sponge = self.sponge(weighted)
-            allied = (sponge + abs(sponge))/2
-            ennemy = (-sponge + abs(sponge))/2
-            conva = np.asarray(64*[0])
-            conve = np.asarray(64*[0])
-            for i in range(64):
-                conva[i] = self.strEl.Rk[i]@allied
-                conve[i] = self.strEl.Rk[i]@ennemy
-            res = (al*conva+en*conve)@rooks
-
-        else:    
-            rooks = self.__list[9*64:10*64]
-            weighted[9*64:10*64] = np.asarray([0]*64)         
-            sponge = self.sponge(weighted)
-            allied = (-sponge + abs(sponge))/2
-            ennemy = (sponge + abs(sponge))/2
-            conva = np.asarray(64*[0])
-            conve = np.asarray(64*[0])
-            for i in range(64):
-                conva[i] = self.strEl.Rk[i]@allied
-                conve[i] = self.strEl.Rk[i]@ennemy
-            res = -(al*conva+en*conve)@rooks
-            
-        return res     
+        sponge = abs(self.sponge(weighted))
+        conv = np.asarray(64*[0])
+        for i in range(64):
+            conv[i] = self.strEl.Rk[i]@sponge
+  
+        wrooks = self.__list[3*64:4*64]
+        brooks = -self.__list[9*64:10*64]
+        
+        return (wrooks+brooks)@conv   
     
     def sponge(self, array=None):
         res = [0]*64

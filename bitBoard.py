@@ -26,7 +26,7 @@ class bitBoard:
         return self.__list*self.__pieceswght
 
     def getEval(self):
-        a1 = 2/3 # material
+        a1 = 5/6 # material
         a2 = (1-a1)/3 # b ctl
         a3 = (1-a1)/3 # q ctl
         a4 = (1-a1)/3 # r ctl
@@ -37,7 +37,7 @@ class bitBoard:
         al = 1/2 # allied control
         en = 1/2 # ennemy control
         weighted = self.getWeighted()
-        if(self.board.turn == chess.WHITE):
+        if(self.board.turn != chess.WHITE): # just pushed a white move, must evaluate the board wrt to white's perspective
             bishops = self.__list[2*64:3*64]
             weighted[2*64:3*64] = np.asarray([0]*64) 
             sponge = self.sponge(weighted)
@@ -61,7 +61,7 @@ class bitBoard:
             for i in range(64):
                 conva[i] = self.strEl.Bp[i]@allied
                 conve[i] = self.strEl.Bp[i]@ennemy
-            res = (al*conva+en*conve)@bishops
+            res = -(al*conva+en*conve)@bishops
 
         return res
     
@@ -70,7 +70,7 @@ class bitBoard:
         al = 1/2 # allied control
         en = 1/2 # ennemy control
         weighted = self.getWeighted()
-        if(self.board.turn == chess.WHITE):
+        if(self.board.turn != chess.WHITE): # just pushed a white move, must evaluate the board wrt to white's perspective
             queen = self.__list[4*64:5*64]
             weighted[4*64:5*64] = np.asarray([0]*64) 
             sponge = self.sponge(weighted)
@@ -94,7 +94,7 @@ class bitBoard:
             for i in range(64):
                 conva[i] = self.strEl.Qn[i]@allied
                 conve[i] = self.strEl.Qn[i]@ennemy
-            res = (al*conva+en*conve)@queen
+            res = -(al*conva+en*conve)@queen
             
         return res 
 
@@ -103,7 +103,7 @@ class bitBoard:
         al = 1/2 # allied control
         en = 1/2 # ennemy control
         weighted = self.getWeighted()
-        if(self.board.turn == chess.WHITE):
+        if(self.board.turn != chess.WHITE): # just pushed a white move, must evaluate the board wrt to white's perspective
             rooks = self.__list[3*64:4*64]
             weighted[3*64:4*64] = np.asarray([0]*64) 
             sponge = self.sponge(weighted)
@@ -127,7 +127,7 @@ class bitBoard:
             for i in range(64):
                 conva[i] = self.strEl.Rk[i]@allied
                 conve[i] = self.strEl.Rk[i]@ennemy
-            res = (al*conva+en*conve)@rooks
+            res = -(al*conva+en*conve)@rooks
             
         return res     
     

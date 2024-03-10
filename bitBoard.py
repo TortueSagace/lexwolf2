@@ -13,11 +13,19 @@ class bitBoard:
         self.__pieceswght = np.asarray([None]*(768+5))
         self.setWeights()
         self.strEl = structEl()
-
         if(board==None): # no board provided, initial board is supposed
             self.board = chess.Board()
 
         self.setList(self.board)
+        
+        self.wghtInit = np.sum(abs(self.getWeighted())) - 16
+
+    def gamePhase(self):
+        weighted = abs(self.getWeighted())
+        weighted[0:64] = np.asarray(64*[0])
+        weighted[6*64:7*64] = np.asarray(64*[0])
+        weight = np.sum(weighted)
+        return 1 - weight/self.wghtInit
 
     def getList(self):
         return self.__list
@@ -26,11 +34,13 @@ class bitBoard:
         return self.__list*self.__pieceswght
 
     def getEval(self):
+        phase = self.gamePhase # goes from 0% to 100% depending on the weight of non-pawn material remaining
         a1 = 5/6 # material
-        a2 = (1-a1)/3 # b ctl
-        a3 = (1-a1)/3 # q ctl
-        a4 = (1-a1)/3 # r ctl
-        return a1*np.sum(self.getWeighted()) + a2*self.bishopCtl() + a3*self.queenCtl() + a4*self.rookCtl()
+        a2 = (1-a1)/5 # b ctl
+        a3 = (1-a1)/5 # q ctl
+        a4 = (1-a1)/5 # r ctl
+        a5 = 2*(1-a1)/5 # k ctl
+        return a1*np.sum(self.getWeighted()) + a2*self.bishopCtl() + a3*(0.5+0.5*phase)*self.queenCtl() + phase*a4*self.rookCtl() + a5*self.knightCtl()
     
     def bishopCtl(self):
         weighted = self.getWeighted()
@@ -43,6 +53,18 @@ class bitBoard:
         bbishops = -self.__list[8*64:9*64]
         
         return (wbishops+bbishops)@conv
+    
+    def knightCtl(self):
+        weighted = self.getWeighted()
+        sponge = abs(self.sponge(weighted))
+        conv = np.asarray(64*[0])
+        for i in range(64):
+            conv[i] = self.strEl.Kn[i]@sponge
+  
+        wknights = self.__list[64:2*64]
+        bknights = -self.__list[7*64:8*64]
+        
+        return (wknights+bknights)@conv
     
     def queenCtl(self): 
         weighted = self.getWeighted()

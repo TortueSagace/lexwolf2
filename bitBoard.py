@@ -34,7 +34,7 @@ class bitBoard:
         return self.__list*self.__pieceswght
 
     def getEval(self):
-        phase = self.gamePhase # goes from 0% to 100% depending on the weight of non-pawn material remaining
+        phase = self.gamePhase() # goes from 0% to 100% depending on the weight of non-pawn material remaining
         a1 = 5/6 # material
         a2 = (1-a1)/5 # b ctl
         a3 = (1-a1)/5 # q ctl

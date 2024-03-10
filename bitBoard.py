@@ -36,19 +36,49 @@ class bitBoard:
     def getEval(self):
         phase = self.gamePhase() # goes from 0% to 100% depending on the weight of non-pawn material remaining
         a1 = 5/6 # material
-        a2 = (1-a1)/5 # b ctl
-        a3 = (1-a1)/5 # q ctl
-        a4 = (1-a1)/5 # r ctl
-        a5 = 2*(1-a1)/5 # k ctl
-        if(phase<=0.25):
-            res = a1*np.sum(self.getWeighted()) + a5*self.knightCtl()
-        elif(phase<=0.5):
-            res = a1*np.sum(self.getWeighted()) + a2*self.bishopCtl() + a3*(0.5+0.5*phase)*self.queenCtl() + a5*self.knightCtl()
+        a2 = (1-a1)/6 # b ctl
+        a3 = (1-a1)/6 # q ctl
+        a4 = (1-a1)/6 # r ctl
+        a5 = (1-a1)/6 # k ctl
+        a6 = (1-a1)/6 # p ctl
+        a7 = (1-a1)/6 # p pen
+        if(phase<=0.125):
+            res = a1*np.sum(self.getWeighted()) + a5*4.5*self.knightCtl() + a6*self.pawnCtl() - a7*self.pawnPenalty()
+        elif(phase>0.125 and phase<=0.25):
+            res = a1*np.sum(self.getWeighted()) + a2*self.bishopCtl() + a3*(0.5+0.5*phase)*self.queenCtl() + a5*self.knightCtl() + + phase*a4*self.rookCtl() + a6*self.pawnCtl() - a7*self.pawnPenalty()
         else:
-            res = a1*np.sum(self.getWeighted()) + a2*self.bishopCtl() + a3*(0.5+0.5*phase)*self.queenCtl() + phase*a4*self.rookCtl() + a5*self.knightCtl()
+            res = a1*np.sum(self.getWeighted()) + a2*self.bishopCtl() + a3*(0.5+0.5*phase)*self.queenCtl() + phase*a4*self.rookCtl() + a5*self.knightCtl() + a6*self.pawnCtl() - a7*self.pawnPenalty()
             
         return res
     
+    def pawnCtl(self):
+        weighted = self.getWeighted()
+        sponge = abs(self.sponge(weighted))
+        convw = np.asarray(64*[0])
+        convb = np.asarray(64*[0])
+        for i in range(64):
+            convw[i] = self.strEl.wP[i]@sponge
+            convb[i] = self.strEl.bP[i]@sponge
+  
+        wPawns = self.__list[0:64]
+        bPawns = -self.__list[6*64:7*64]
+        
+        return wPawns@convw + bPawns@convb
+
+    def pawnPenalty(self):  
+        spongew = self.__list[0:64]
+        spongeb = self.__list[6*64:7*64]
+        convw = np.asarray(64*[0])
+        convb = np.asarray(64*[0])
+        for i in range(64):
+            convw[i] = self.strEl.Pp[i]@spongew
+            convb[i] = self.strEl.Pp[i]@spongeb
+  
+        wPawns = spongew
+        bPawns = -spongeb
+        
+        return wPawns@convw + bPawns@convb  
+
     def bishopCtl(self):
         weighted = self.getWeighted()
         sponge = abs(self.sponge(weighted))

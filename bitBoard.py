@@ -40,9 +40,9 @@ class bitBoard:
         a3 = (1-a1)/5 # q ctl
         a4 = (1-a1)/5 # r ctl
         a5 = 2*(1-a1)/5 # k ctl
-        if(phase<=0.5):
-            res = a1*np.sum(self.getWeighted()) + a2*self.bishopCtl() + a5*self.knightCtl()
-        elif(phase<=0.75):
+        if(phase<=0.25):
+            res = a1*np.sum(self.getWeighted()) + a5*self.knightCtl()
+        elif(phase<=0.5):
             res = a1*np.sum(self.getWeighted()) + a2*self.bishopCtl() + a3*(0.5+0.5*phase)*self.queenCtl() + a5*self.knightCtl()
         else:
             res = a1*np.sum(self.getWeighted()) + a2*self.bishopCtl() + a3*(0.5+0.5*phase)*self.queenCtl() + phase*a4*self.rookCtl() + a5*self.knightCtl()

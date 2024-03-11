@@ -48,7 +48,7 @@ class MinmaxLexWolf(LexWolfCore):
 
     def minimax(self, board, depth, alpha, beta, is_maximizing, bitBrd):
         if depth == 0 or board.is_game_over():
-            return self.evaluate(board, bitBrd)
+            return self.evaluate( board, bitBrd)
 
         if is_maximizing:
             max_eval = float('-inf')
@@ -56,7 +56,7 @@ class MinmaxLexWolf(LexWolfCore):
                 if time() - self.start_time > self.max_thinking_time:
                     break
                 board.push(move)
-                eval = self.minimax(board, depth - 1, alpha, beta, False, bitBrd)
+                eval = self.minimax( board, depth - 1, alpha, beta, False, bitBrd)
                 board.pop()
                 max_eval = max(max_eval, eval)
                 alpha = max(alpha, max_eval)
@@ -69,7 +69,7 @@ class MinmaxLexWolf(LexWolfCore):
                 if time() - self.start_time > self.max_thinking_time:
                     break
                 board.push(move)
-                eval = self.minimax(board, depth - 1, alpha, beta, True, bitBrd)
+                eval = self.minimax( board, depth - 1, alpha, beta, True, bitBrd)
                 board.pop()
                 min_eval = min(min_eval, eval)
                 beta = min(beta, min_eval)
@@ -77,12 +77,33 @@ class MinmaxLexWolf(LexWolfCore):
                     break  # Alpha cut-off                
             return min_eval
 
+    def quicksort(self,moveList, turn):
+        if(len(moveList)<=1):
+            return moveList
+        elif(turn==chess.WHITE):
+            pivot = moveList[0][1]
+            less_than_pivot = [x for x in moveList[1:] if x[1] <= pivot]
+            greater_than_pivot = [x for x in moveList[1:] if x[1] > pivot]
+            return self.quicksort(greater_than_pivot,turn) +  [moveList[0]] + self.quicksort(less_than_pivot,turn) 
+        elif(turn==chess.BLACK):
+            pivot = moveList[0][1]
+            less_than_pivot = [x for x in moveList[1:] if x[1] > pivot] # for black, lesser moves are those of a greater value
+            greater_than_pivot = [x for x in moveList[1:] if x[1] <= pivot]
+            return self.quicksort(greater_than_pivot,turn) + [moveList[0]] + self.quicksort(less_than_pivot,turn)
+ 
     def find_optimal_move(self, board=chess.Board(), bitBrd=bitBoard()):
         turn = board.turn
         self.start_time = time()
         legal_moves = list(board.legal_moves)
-        shuffle(legal_moves)
-        best_move = legal_moves[0]
+        move_value = [None] * len(legal_moves)
+
+        for i in range(len(legal_moves)):
+            board.push(legal_moves[i])
+            move_value[i] =  (legal_moves[i], self.minimax(board, 0, float('-Inf'), float('Inf'), not turn,bitBrd))
+            board.pop()
+        
+        sorted_moves = self.quicksort(move_value,turn)
+        best_move = sorted_moves[0]
         best_value = float('-inf') if turn == chess.WHITE else float('inf')
         alpha = float('-inf')
         beta = float('inf')

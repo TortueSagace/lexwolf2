@@ -17,8 +17,17 @@ class bitBoard:
             self.board = chess.Board()
 
         self.setList(self.board)
-        
         self.wghtInit = np.sum(abs(self.getWeighted())) - 16
+        self.__value = self.getEval()
+
+    def value(self):
+        return self.__value
+    
+    def getList(self):
+        return self.__list
+    
+    def getWeighted(self):
+        return self.__list*self.__pieceswght
 
     def gamePhase(self):
         weighted = abs(self.getWeighted())
@@ -26,13 +35,7 @@ class bitBoard:
         weighted[6*64:7*64] = np.asarray(64*[0])
         weight = np.sum(weighted)
         return 1 - weight/self.wghtInit
-
-    def getList(self):
-        return self.__list
     
-    def getWeighted(self):
-        return self.__list*self.__pieceswght
-
     def getEval(self):
         phase = self.gamePhase() # goes from 0% to 100% depending on the weight of non-pawn material remaining
         a1 = 5/6 # material
@@ -40,17 +43,12 @@ class bitBoard:
         a3 = (1-a1)/7 # q ctl
         a4 = (1-a1)/7 # r ctl
         a5 = (1-a1)/7 # k ctl
-        a6 = (1-a1)/7 # p ctl
-        a7 = (1-a1)/14 # p pen
+        a6 = (1-a1)/10 # p ctl
+        a7 = (1-a1)/10 # p pen
         a8 = (1 -a1)/7 # king exposed
         a9 = (1-a1)/14 # king protected
 
-        if(phase<=0.125):
-            res = a1*np.sum(self.getWeighted()) + a5*4.5*self.knightCtl() + a6*self.pawnCtl() - a7*self.pawnPenalty() + a9*self.kingProtected()
-        elif(phase>0.125 and phase<=0.25):
-            res = a1*np.sum(self.getWeighted()) + a2*self.bishopCtl() + a3*(0.5+0.5*phase)*self.queenCtl() + a5*self.knightCtl() + + phase*a4*self.rookCtl() + a6*self.pawnCtl() - a7*self.pawnPenalty() + a9*self.kingProtected()
-        else:
-            res = a1*np.sum(self.getWeighted()) + a2*self.bishopCtl() + a3*(0.5+0.5*phase)*self.queenCtl() + phase*a4*self.rookCtl() + a5*self.knightCtl() + a6*self.pawnCtl() - a7*self.pawnPenalty() + a9*self.kingProtected()
+        res = a1*np.sum(self.getWeighted()) + a2*self.bishopCtl() + a3*(0.5+0.5*phase)*self.queenCtl() + phase*a4*self.rookCtl() + (1+0.5*(1-phase))*a5*self.knightCtl() + a6*self.pawnCtl() - a7*self.pawnPenalty() + a9*self.kingProtected()
             
         return res
     
@@ -66,9 +64,12 @@ class bitBoard:
         convw = [0]*64
         convb = [0]*64
         for i in range(64):
-            convw[i]=self.Kg[i]@spongew
-            convb[i]=self.Kg[i]@spongeb
-        return wKing@convw + bKing@convb    
+            if(wKing[i]==1):
+                convw += self.strEl.Kg[i]
+            if(bKing[i]==-1):    
+                convb -= self.strEl.Kg[i]
+
+        return spongew@convw + spongeb@convb    
 
     def pawnCtl(self):
         weighted = self.getWeighted()
@@ -78,28 +79,31 @@ class bitBoard:
         spongeb = abs(self.sponge(weighted)) + 9*wKing
         convw = np.asarray(64*[0])
         convb = np.asarray(64*[0])
-        for i in range(64):
-            convw[i] = self.strEl.wP[i]@spongew
-            convb[i] = self.strEl.bP[i]@spongeb
-  
         wPawns = self.__list[0:64]
         bPawns = -self.__list[6*64:7*64]
         
-        return wPawns@convw + bPawns@convb
+        for i in range(64):
+            if(wPawns[i]==1):
+                convw += self.strEl.wP[i]
+            if(bPawns[i]==-1):    
+                convb -= self.strEl.bP[i]
+
+        return spongew@convw + spongeb@convb
 
     def pawnPenalty(self):  
         spongew = self.__list[0:64]
         spongeb = self.__list[6*64:7*64]
+        wPawns = spongew
+        bPawns = -spongeb
         convw = np.asarray(64*[0])
         convb = np.asarray(64*[0])
         for i in range(64):
-            convw[i] = self.strEl.Pp[i]@spongew
-            convb[i] = self.strEl.Pp[i]@spongeb
-  
-        wPawns = spongew
-        bPawns = -spongeb
+            if(wPawns[i]==1):
+                convw += self.strEl.Pp[i]
+            if(bPawns[i]==-1):    
+                convb -= self.strEl.Pp[i]
         
-        return wPawns@convw + bPawns@convb  
+        return spongew@convw + spongeb@convb  
 
     def bishopCtl(self):
         weighted = self.getWeighted()
@@ -107,16 +111,17 @@ class bitBoard:
         bKing = self.__list[11*64:12*64]
         spongew = abs(self.sponge(weighted)) + 9*bKing
         spongeb = abs(self.sponge(weighted)) + 9*wKing
+        wbishops = self.__list[2*64:3*64]
+        bbishops = -self.__list[8*64:9*64]
         convw = np.asarray(64*[0])
         convb = np.asarray(64*[0])
         for i in range(64):
-            convw[i] = self.strEl.Bp[i]@spongew
-            convb[i] = self.strEl.Bp[i]@spongeb
-  
-        wbishops = self.__list[2*64:3*64]
-        bbishops = -self.__list[8*64:9*64]
+            if(wbishops[i]==1):
+                convw += self.strEl.Bp[i]
+            if(bbishops[i]==-1):    
+                convb -= self.strEl.Bp[i]
         
-        return wbishops@convw + bbishops@convb
+        return spongew@convw + spongeb@convb
                     
     def knightCtl(self):
         weighted = self.getWeighted()
@@ -124,16 +129,17 @@ class bitBoard:
         bKing = self.__list[11*64:12*64]
         spongew = abs(self.sponge(weighted)) + 9*bKing
         spongeb = abs(self.sponge(weighted)) + 9*wKing
+        wknights = self.__list[64:2*64]
+        bknights = -self.__list[7*64:8*64]
         convw = np.asarray(64*[0])
         convb = np.asarray(64*[0])
         for i in range(64):
-            convw[i] = self.strEl.Kn[i]@spongew
-            convb[i] = self.strEl.Kn[i]@spongeb
+            if(wknights[i]==1):
+                convw += self.strEl.Kn[i]
+            if(bknights[i]==-1):    
+                convb -= self.strEl.Kn[i]
   
-        wknights = self.__list[64:2*64]
-        bknights = -self.__list[7*64:8*64]
-        
-        return wknights@convw + bknights@convb
+        return spongew@convw + spongeb@convb
     
     def queenCtl(self): 
         weighted = self.getWeighted()
@@ -143,14 +149,15 @@ class bitBoard:
         spongeb = abs(self.sponge(weighted)) + 9*wKing
         convw = np.asarray(64*[0])
         convb = np.asarray(64*[0])
-        for i in range(64):
-            convw[i] = self.strEl.Qn[i]@spongew
-            convb[i] = self.strEl.Qn[i]@spongeb
-  
         wqueen = self.__list[4*64:5*64]
         bqueen = -self.__list[10*64:11*64]
+        for i in range(64):
+            if(wqueen[i]==1):
+                convw += self.strEl.Qn[i]
+            if(bqueen[i]==-1):    
+                convb -= self.strEl.Qn[i]
         
-        return wqueen@convw+bqueen@convb
+        return spongew@convw+spongeb@convb
     
 
     def rookCtl(self): 
@@ -159,16 +166,17 @@ class bitBoard:
         bKing = self.__list[11*64:12*64]
         spongew = abs(self.sponge(weighted)) + 9*bKing
         spongeb = abs(self.sponge(weighted)) + 9*wKing
+        wrooks = self.__list[3*64:4*64]
+        brooks = -self.__list[9*64:10*64]
         convw = np.asarray(64*[0])
         convb = np.asarray(64*[0])
         for i in range(64):
-            convw[i] = self.strEl.Rk[i]@spongew
-            convb[i] = self.strEl.Rk[i]@spongeb
-  
-        wrooks = self.__list[3*64:4*64]
-        brooks = -self.__list[9*64:10*64]
-        
-        return wrooks@convw+brooks@convb 
+            if(wrooks[i]==1):
+                convw += self.strEl.Rk[i]
+            if(brooks[i]==-1):    
+                convb -= self.strEl.Rk[i]
+    
+        return spongew@convw+spongew@convb 
     
     def sponge(self, array=None):
         res = [0]*64

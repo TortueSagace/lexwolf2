@@ -126,7 +126,7 @@ class structEl():
         self.Pp = self.setPawnPenalty()
         self.Kg = self.setKing()
 
-    def setKing():
+    def setKing(self):
         res = [[]]*64    
         for i in range(8):
             for j in range(8):

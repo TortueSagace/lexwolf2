@@ -2,14 +2,15 @@ import chess
 import numpy as np
 from weights import WEIGHTS
 from structEl import structEl
+from math import floor
+
+COLOR_OFFSET = {chess.WHITE: 0, chess.BLACK: 1}
+BOOL_BIN = {True: 1, False: 0}
 
 class bitBoard:
 
     def __init__(self,board=None):
-        self.COLOR_OFFSET = {chess.WHITE: 0, chess.BLACK: 1}
-        self.BOOL_BIN = {True: 1, False: 0}
-        self.board = board
-        self.__list = np.asarray([None]*(768+5)) # private 772-bits bit array: 64*6*2 + 5 ~ 64 cases for each piece of each color plus side to move & castling rights
+        self.__list = np.asarray([None]*(768+5)) # private 773-bits bit array: 64*6*2 + 5 ~ 64 cases for each piece of each color plus side to move & castling rights
         self.__pieceswght = np.asarray([None]*(768+5))
         self.setWeights()
         self.strEl = structEl()
@@ -18,7 +19,7 @@ class bitBoard:
 
         self.setList(self.board)
         self.wghtInit = np.sum(abs(self.getWeighted())) - 16
-        self.__value = self.getEval()
+        self.__value = None
 
     def value(self):
         return self.__value
@@ -47,10 +48,23 @@ class bitBoard:
         a7 = (1-a1)/10 # p pen
         a8 = (1 -a1)/7 # king exposed
         a9 = (1-a1)/14 # king protected
-
         res = a1*np.sum(self.getWeighted()) + a2*self.bishopCtl() + a3*(0.5+0.5*phase)*self.queenCtl() + phase*a4*self.rookCtl() + (1+0.5*(1-phase))*a5*self.knightCtl() + a6*self.pawnCtl() - a7*self.pawnPenalty() + a9*self.kingProtected()
-            
+        self.__value = res
         return res
+    
+    def getDeltaEval(self, prevBboard):
+        res = 0
+        listDiff = self.__list - prevBboard.getList()
+        listDiff = listDiff[0:768]
+        white = True
+        index = 0
+        for i in range(len(listDiff)):
+            if listDiff[i]!=0:
+                index = i
+        if(i/64>=6):
+            white = False
+        self.__value = res + prevBboard.value()
+        return self.__value
     
     def kingProtected(self):
         whites = self.__list
@@ -193,14 +207,14 @@ class bitBoard:
             for square in chess.SQUARES:
                 piece = board.piece_at(square)
                 if(piece!=None):
-                    index = square + (piece.piece_type-1)*64 + self.COLOR_OFFSET[piece.color]*64*6
+                    index = square + (piece.piece_type-1)*64 + COLOR_OFFSET[piece.color]*64*6
                     self.__list[index] = 0b1
 
-            self.__list[-5] = self.BOOL_BIN[board.turn]
-            self.__list[-4] = self.BOOL_BIN[board.has_kingside_castling_rights(chess.WHITE)]
-            self.__list[-3] = self.BOOL_BIN[board.has_queenside_castling_rights(chess.WHITE)]
-            self.__list[-2] = self.BOOL_BIN[board.has_kingside_castling_rights(chess.BLACK)]
-            self.__list[-1] = self.BOOL_BIN[board.has_queenside_castling_rights(chess.BLACK)]
+            self.__list[-5] = BOOL_BIN[board.turn]
+            self.__list[-4] = BOOL_BIN[board.has_kingside_castling_rights(chess.WHITE)]
+            self.__list[-3] = BOOL_BIN[board.has_queenside_castling_rights(chess.WHITE)]
+            self.__list[-2] = BOOL_BIN[board.has_kingside_castling_rights(chess.BLACK)]
+            self.__list[-1] = BOOL_BIN[board.has_queenside_castling_rights(chess.BLACK)]
 
     def setWeights(self):        
         self.__pieceswght[0:64] = np.asarray([WEIGHTS['PAWN_VALUE']]*64)

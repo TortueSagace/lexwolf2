@@ -16,6 +16,8 @@ class bitBoard:
         self.strEl = structEl()
         if(board==None): # no board provided, initial board is supposed
             self.board = chess.Board()
+        else:
+            self.board = board
 
         self.setList(self.board)
         self.wghtInit = np.sum(abs(self.getWeighted())) - 16

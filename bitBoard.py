@@ -188,16 +188,8 @@ class bitBoard:
                     elif(wdiffSponge[i]<0):   
                         res += a3*self.subQueenCtl(False, maskedPrev.copy(),prevBboardList[10*64:11*64]*convqn)                   
 
-                print('nwkg - nbkg: ', (nwkg - nbkg))
-                print('nwkn - nbkn: ', (nwkn - nbkn))
-                print('nwbs - nbbs: ', (nwbs - nbbs))
-                print('nwrk - nbrk: ', (nwrk - nbrk))
-                print('nwq - nbq: ', (nwq - nbq))
-                print('nwp - nbp: ', (nwp - nbp))
-
                 res += a9*(nwkg - nbkg) + wdiffSponge[i]*(a5*(nwkn - nbkn) + a2*(nwbs - nbbs) + a4*(nwrk - nbrk) + a3*(nwq - nbq) + a6*(nwp - nbp))
 
-        print("first step res: ", res)
         for i in indexes:
             if(i/64>=6):
                 color = False
@@ -260,7 +252,6 @@ class bitBoard:
                 ctl = a9*self.subKingProtected(color, prevBboardList.copy(), listDiff[11*64:12*64])
                 res-=ctl 
         
-        print("res 2nd step: ", res)
         self.__value = res + prevBboardValue
         return self.__value
     

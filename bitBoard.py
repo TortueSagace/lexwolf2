@@ -21,7 +21,6 @@ class bitBoard:
             self.board = board   
 
         self.setList(self.board)
-        self.wghtInit = np.sum(abs(self.getWeighted())) - 16
         self.__value = self.getEval()
 
     def value(self):
@@ -35,16 +34,8 @@ class bitBoard:
             return self.__list * self.__pieceswght
         else:
             return lst * self.__pieceswght
-
-    def gamePhase(self):
-        weighted = abs(self.getWeighted())
-        weighted[0:64] = np.asarray(64*[0])
-        weighted[6*64:7*64] = np.asarray(64*[0])
-        weight = np.sum(weighted)
-        return 1 - weight/self.wghtInit
     
     def getEval(self):
-        phase = self.gamePhase() # goes from 0% to 100% depending on the weight of non-pawn material remaining
         a1 = 5/6 # material
         a2 = (1-a1)/7 # b ctl
         a3 = (1-a1)/7 # q ctl
@@ -55,9 +46,9 @@ class bitBoard:
         a8 = (1 -a1)/7 # king exposed
         a9 = (1-a1)/14 # king protected
         if(self.bF == True):
-            res = a1*np.sum(self.getWeighted()) + a2*self.bishopCtlBf() + a3*(0.5+0.5*phase)*self.queenCtlBf() + phase*a4*self.rookCtlBf() + (1+0.5*(1-phase))*a5*self.knightCtl() + a6*self.pawnCtl() - a7*self.pawnPenalty() + a9*self.kingProtected()
+            res = a1*(np.sum(self.getWeighted()[0:6*64])-np.sum(self.getWeighted()[6*64:12*64])) + a2*self.bishopCtlBf() + a3*self.queenCtlBf() + a4*self.rookCtlBf() + a5*self.knightCtl() + a6*self.pawnCtl() - a7*self.pawnPenalty() + a9*self.kingProtected()
         else: 
-            res = a1*np.sum(self.getWeighted()) + a2*self.bishopCtl() + a3*(0.5+0.5*phase)*self.queenCtl() + phase*a4*self.rookCtl() + (1+0.5*(1-phase))*a5*self.knightCtl() + a6*self.pawnCtl() - a7*self.pawnPenalty() + a9*self.kingProtected()
+            res =  a1*(np.sum(self.getWeighted()[0:6*64])-np.sum(self.getWeighted()[6*64:12*64])) + a2*self.bishopCtl() + a3*self.queenCtl() + a4*self.rookCtl() + a5*self.knightCtl() + a6*self.pawnCtl() - a7*self.pawnPenalty() + a9*self.kingProtected()
         self.__value = res
         return res
     
@@ -73,9 +64,6 @@ class bitBoard:
         a9 = (1-a1)/14 # king protected
         prevBboardList = prevList.copy()
         listDiff = self.__list - prevBboardList
-        weightedDiff = self.getWeighted(listDiff)
-        res = a1*np.sum(weightedDiff) 
-        color = True
         indexes = []
         for i in range(len(listDiff)):
             if listDiff[i]!=0:
@@ -86,32 +74,40 @@ class bitBoard:
                         indexes.append(i)
                     else:
                         prevBboardList[indexes[-1]]=0
-                        prevBboardList[i]=0        
+                        prevBboardList[i]=0  
+                        colorMoved = True if i<6*64 else False   
 
+        weightedDiff = self.getWeighted(listDiff) 
+        res = a1*(np.sum(weightedDiff[0:6*64])-np.sum(weightedDiff[6*64:12*64])) 
         wdiffSponge = self.sponge(weightedDiff)
         prevSponge = self.sponge(prevBboardList)
-        dirbis = [self.strEl.NE, self.strEl.NW, self.strEl.SE, self.strEl.SW]
-        dirrk = [self.strEl.S, self.strEl.N, self.strEl.E, self.strEl.W]
-        for i in range(len(wdiffSponge)):
-            if(wdiffSponge[i]!=0):
-                convkg = self.strEl.Kg[i]
-                convkn =  self.strEl.Kn[i]
-                convbp = self.strEl.wP[i]
-                convwp = self.strEl.bP[i]
-                convpp = self.strEl.Pp[i]
+        dirb1 = [self.strEl.NE, self.strEl.SW]
+        dirb2 = [self.strEl.NW, self.strEl.SE]
+        dirbis = dirb1 + dirb2
+        dirk1 = [self.strEl.S, self.strEl.N]
+        dirk2 = [self.strEl.E, self.strEl.W]
+        dirrk = dirk1 + dirk2
+        for k in range(len(wdiffSponge)):
+            rank = k
+            pivot = wdiffSponge[k]
+            if(pivot!=0):
+                convkg = self.strEl.Kg[k]
+                convkn =  self.strEl.Kn[k]
+                convbp = self.strEl.wP[k]
+                convwp = self.strEl.bP[k]
                 convbis = np.asarray([0]*64)
                 convrk = np.asarray([0]*64)
                 convqn = np.asarray([0]*64)
                 for d in dirbis:
                     j = 0
-                    while(np.sum(d[-j][i]@prevSponge)>1):
+                    while(np.sum(d[-j][k]@prevSponge)>1):
                         j += 1
-                    convbis += d[-j][i]
+                    convbis += d[-j][k]
                 for d in dirrk:
                     j = 0
-                    while(np.sum(d[-j][i]@prevSponge)>1):
+                    while(np.sum(d[-j][k]@prevSponge)>1):
                         j += 1
-                    convrk += d[-j][i]    
+                    convrk += d[-j][k]    
                 convqn = convbis + convrk
 
                 nwkg = convkg@prevBboardList[5*64:6*64]
@@ -127,68 +123,119 @@ class bitBoard:
                 nwp = convwp@prevBboardList[0:64]
                 nbp = convbp@prevBboardList[6*64:7*64]
 
+                t1 = np.sign(pivot)*nwkg if colorMoved else -np.sign(pivot)*nbkg
+
+                res += a9*t1 + pivot*(a5*(nwkn - nbkn) + a2*(nwbs - nbbs) + a4*(nwrk - nbrk) + a3*(nwq - nbq) + a6*(nwp - nbp))
+
                 if(nwbs>=1):
                     maskedPrev = []
                     for i in range(12):
                         maskedPrev.extend(prevBboardList[i*64:(i+1)*64]*convbis)
                     maskedPrev.extend([0]*5)    
                     maskedPrev = np.asarray(maskedPrev)     
-                    if(wdiffSponge[i]>0):
-                        res -= a2*self.subBishopCtl(True, maskedPrev.copy(),prevBboardList[2*64:3*64]*convbis)
-                    elif(wdiffSponge[i]<0):   
-                        res += a2*self.subBishopCtl(True, maskedPrev.copy(),prevBboardList[2*64:3*64]*convbis)
-                elif(nbbs>=1):
+                    if(pivot>0):
+                        res -= a2*self.subBishopCtlBf(True, maskedPrev.copy(),prevBboardList[2*64:3*64]*convbis)
+                    elif(pivot<0):   
+                        res += a2*self.subBishopCtlBf(True, maskedPrev.copy(),prevBboardList[2*64:3*64]*convbis)
+                if(nbbs>=1):
                     maskedPrev = []
                     for i in range(12):
                         maskedPrev.extend(prevBboardList[i*64:(i+1)*64]*convbis)
                     maskedPrev.extend([0]*5)    
                     maskedPrev = np.asarray(maskedPrev)         
-                    if(wdiffSponge[i]>0):
-                        res -= a2*self.subBishopCtl(False, maskedPrev.copy(),prevBboardList[8*64:9*64]*convbis)
-                    elif(wdiffSponge[i]<0):   
-                        res += a2*self.subBishopCtl(False, maskedPrev.copy(),prevBboardList[8*64:9*64]*convbis)
-                elif(nwrk>=1):
+                    if(pivot>0):
+                        res -= -a2*self.subBishopCtlBf(False, maskedPrev.copy(),prevBboardList[8*64:9*64]*convbis)
+                    elif(pivot<0):   
+                        res += -a2*self.subBishopCtlBf(False, maskedPrev.copy(),prevBboardList[8*64:9*64]*convbis)
+                if(nwrk>=1):
                     maskedPrev = []
                     for i in range(12):
                         maskedPrev.extend(prevBboardList[i*64:(i+1)*64]*convrk)
                     maskedPrev.extend([0]*5)    
-                    maskedPrev = np.asarray(maskedPrev)     
-                    if(wdiffSponge[i]>0):
-                        res -= a4*self.subRookCtl(True, maskedPrev.copy(),prevBboardList[3*64:4*64]*convrk)
-                    elif(wdiffSponge[i]<0):   
-                        res += a4*self.subRookCtl(True, maskedPrev.copy(),prevBboardList[3*64:4*64]*convrk)   
-                elif(nbrk>=1):
+                    maskedPrev = np.asarray(maskedPrev)   
+                    if(pivot>0):
+                        res -= a4*self.subRookCtlBf(True, maskedPrev.copy(),prevBboardList[3*64:4*64]*convrk)
+                    if(pivot<0): 
+                        res += a4*self.subRookCtlBf(True, maskedPrev.copy(),prevBboardList[3*64:4*64]*convrk)    
+                if(nbrk>=1):
                     maskedPrev = []
                     for i in range(12):
                         maskedPrev.extend(prevBboardList[i*64:(i+1)*64]*convrk) 
                     maskedPrev.extend([0]*5)        
                     maskedPrev = np.asarray(maskedPrev) 
-                    if(wdiffSponge[i]>0):
-                        res -= a4*self.subRookCtl(False, maskedPrev.copy(),prevBboardList[9*64:10*64]*convrk)
-                    elif(wdiffSponge[i]<0):   
-                        res += a4*self.subRookCtl(False, maskedPrev.copy(),prevBboardList[9*64:10*64]*convrk) 
-                elif(nwq>=1):
-                    maskedPrev = []
-                    for i in range(12):
-                        maskedPrev.extend(prevBboardList[i*64:(i+1)*64]*convqn)
-                    maskedPrev.extend([0]*5)    
-                    maskedPrev = np.asarray(maskedPrev)         
-                    if(wdiffSponge[i]>0):
-                        res -= a3*self.subQueenCtl(True, maskedPrev.copy(), prevBboardList[4*64:5*64]*convqn)
-                    elif(wdiffSponge[i]<0):   
-                        res += a3*self.subQueenCtl(True, maskedPrev.copy(), prevBboardList[4*64:5*64]*convqn) 
-                elif(nbq>=1):  
-                    maskedPrev = []
-                    for i in range(12):
-                        maskedPrev.extend(prevBboardList[i*64:(i+1)*64]*convqn)
-                    maskedPrev.extend([0]*5)    
-                    maskedPrev = np.asarray(maskedPrev)         
-                    if(wdiffSponge[i]>0):
-                        res -= a3*self.subQueenCtl(False, maskedPrev.copy(),prevBboardList[10*64:11*64]*convqn)
-                    elif(wdiffSponge[i]<0):   
-                        res += a3*self.subQueenCtl(False, maskedPrev.copy(),prevBboardList[10*64:11*64]*convqn)                   
+                    if(pivot>0):
+                        res -= -a4*self.subRookCtlBf(False, maskedPrev.copy(),prevBboardList[9*64:10*64]*convrk)
+                    elif(pivot<0):   
+                        res += -a4*self.subRookCtlBf(False, maskedPrev.copy(),prevBboardList[9*64:10*64]*convrk) 
+                if(nwq>=1):
+                    speconv = np.asarray([0]*64)
+                    if np.sum(convbis@prevBboardList[4*64:5*64])==1: # pivot on queen's diagonal
+                        #print("# pivot on queen's diagonal")
+                        for d in dirb1:
+                            if np.sum(d[0][rank]@prevBboardList[4*64:5*64])==1:  # queen on NE SW direction
+                                #print("# queen on NE SW direction")
+                                dir = dirb1
+                                break
+                            else: # queen on NW SE direction
+                                #print("# queen on NW SE direction")
+                                dir = dirb2    
+                    else: #pivot on queen's horizontal/vertical   
+                        #print("# pivot on queen's horizontal/vertical")
+                        for d in dirk1:
+                            if np.sum(d[0][rank]@prevBboardList[4*64:5*64]):  # queen on S N direction
+                                #print("# queen on S N direction")
+                                dir = dirk1
+                                break
+                            else: # queen on W E direction
+                                #print("# queen on W E direction")
+                                dir = dirk2             
+                    for d in dir:
+                        j = 0
+                        while(np.sum(d[-j][k]@prevSponge)>1):
+                            j += 1
+                        speconv += d[-j][k]  
 
-                res += a9*(nwkg - nbkg) + wdiffSponge[i]*(a5*(nwkn - nbkn) + a2*(nwbs - nbbs) + a4*(nwrk - nbrk) + a3*(nwq - nbq) + a6*(nwp - nbp))
+                    maskedPrev = []
+                    for i in range(12):
+                        maskedPrev.extend(prevBboardList[i*64:(i+1)*64]*speconv)
+                    maskedPrev.extend([0]*5)    
+                    maskedPrev = np.asarray(maskedPrev)         
+                    if(pivot>0):
+                        res -= -a3*self.subQueenCtlBf(True, maskedPrev.copy(), prevBboardList[4*64:5*64])
+                    elif(pivot<0):   
+                        res += -a3*self.subQueenCtlBf(True, maskedPrev.copy(), prevBboardList[4*64:5*64]) 
+
+                if(nbq>=1):  
+                    speconv = np.asarray([0]*64)
+                    if np.sum(convbis@prevBboardList[10*64:11*64])==1: # pivot on queen's diagonal
+                        for d in dirb1:
+                            if np.sum(d[0][rank]@prevBboardList[10*64:11*64])==1:  # queen on NE SW direction
+                                dir = dirb1
+                                break
+                            else: # queen on NW SE direction
+                                dir = dirb2    
+                    else: #pivot on queen's horizontal/vertical   
+                        for d in dirk1:
+                            if np.sum(d[0][rank]@prevBboardList[10*64:11*64]):  # queen on S N direction
+                                dir = dirk1
+                                break
+                            else: # queen on W E direction
+                                dir = dirk2             
+                    for d in dir:
+                        j = 0
+                        while(np.sum(d[-j][k]@prevSponge)>1):
+                            j += 1
+                        speconv += d[-j][k]
+
+                    maskedPrev = []
+                    for i in range(12):
+                        maskedPrev.extend(prevBboardList[i*64:(i+1)*64]*speconv)
+                    maskedPrev.extend([0]*5)    
+                    maskedPrev = np.asarray(maskedPrev)         
+                    if(pivot>0):
+                        res -= -a3*self.subQueenCtlBf(False, maskedPrev.copy(),prevBboardList[10*64:11*64])
+                    elif(pivot<0):   
+                        res += -a3*self.subQueenCtlBf(False, maskedPrev.copy(),prevBboardList[10*64:11*64])                   
 
         for i in indexes:
             if(i/64>=6):
@@ -198,8 +245,8 @@ class bitBoard:
                 color = True    
 
             if(i in np.asarray(range(0,64))): # white pawn moved
-                ctl = a6*self.subPawnCtl(color, prevBboardList, listDiff[0:64].copy()) 
-                pen = - a7*self.subPawnPenalty(color,prevBboardList, listDiff[0:64].copy())
+                ctl = a6*self.subPawnCtl(color, prevBboardList.copy(), listDiff[0:64]) 
+                pen = - a7*self.subPawnPenaltyDel(color,prevBboardList.copy(), listDiff[0:64])
                 res+=ctl + pen  
             
 
@@ -215,7 +262,7 @@ class bitBoard:
 
             elif(i in np.asarray(range(3*64,4*64))): # white rook moved   
                 ctl = a4*self.subRookCtl(color, prevBboardList.copy(), listDiff[3*64:4*64])
-           
+                res+=ctl    
 
             elif(i in np.asarray(range(4*64,5*64))): # white queen moved
                 ctl = a3*self.subQueenCtl(color, prevBboardList.copy(), listDiff[4*64:5*64])
@@ -228,7 +275,7 @@ class bitBoard:
 
             elif(i in np.asarray(range(6*64,7*64))): # black pawn moved    
                 ctl = a6*self.subPawnCtl(color, prevBboardList.copy(), listDiff[6*64:7*64]) 
-                pen = - a7*self.subPawnPenalty(color,prevBboardList.copy(), listDiff[6*64:7*64])
+                pen = - a7*self.subPawnPenaltyDel(color,prevBboardList.copy(), listDiff[6*64:7*64])
                 res-=ctl + pen  
 
             elif(i in np.asarray(range(7*64,8*64))): # black knight moved    
@@ -330,7 +377,7 @@ class bitBoard:
 
         return sponge@conv
 
-    def subPawnPenalty(self,color, lst, pawns = None):
+    def subPawnPenaltyDel(self,color, lst, pawns = None):
         if(color==True):  
             sponge = lst[0:64]
             if(pawns is None):
@@ -347,6 +394,22 @@ class bitBoard:
                 conv += self.strEl.Pp[i]
             elif(pawns[i]==-1):
                 conv -= self.strEl.Pp[i]    
+
+        return 2*sponge@conv 
+    
+    def subPawnPenalty(self,color, lst):
+        if(color==True):  
+            sponge = lst[0:64]
+            pawns=sponge
+        else:
+            sponge = lst[6*64:7*64]
+            pawns=sponge
+    
+        conv = np.asarray(64*[0])
+
+        for i in range(64):
+            if(pawns[i]==1):
+                conv += self.strEl.Pp[i]
 
         return sponge@conv 
 
@@ -492,19 +555,18 @@ class bitBoard:
         conv = np.asarray(64*[0])
         dir = [self.strEl.S, self.strEl.N, self.strEl.E, self.strEl.W]
         for i in range(64):
-            for i in range(64):
-                if(rooks[i]==1):
-                    for d in dir:
-                        j = 0
-                        while(np.sum(d[-j][i]@unweightspg)>1):
-                            j += 1
-                        conv += d[-j][i]
-                elif(rooks[i]==-1):
-                    for d in dir:
-                        j = 0
-                        while(np.sum(d[-j][i]@unweightspg)>1):
-                            j += 1
-                        conv -= d[-j][i]        
+            if(rooks[i]==1):
+                for d in dir:
+                    j = 0
+                    while(np.sum(d[-j][i]@unweightspg)>1):
+                        j += 1
+                    conv += d[-j][i]
+            elif(rooks[i]==-1):
+                for d in dir:
+                    j = 0
+                    while(np.sum(d[-j][i]@unweightspg)>1):
+                        j += 1
+                    conv -= d[-j][i]        
         return sponge@conv
                     
     def subKnightCtl(self, color, lst, knights = None):
@@ -556,10 +618,10 @@ class bitBoard:
         self.__pieceswght[192:256] = np.asarray([WEIGHTS['ROOK_VALUE']]*64)
         self.__pieceswght[256:320] = np.asarray([WEIGHTS['QUEEN_VALUE']]*64)
         self.__pieceswght[320:384] = np.asarray([0]*64)
-        self.__pieceswght[384:448] = np.asarray([-WEIGHTS['PAWN_VALUE']]*64)
-        self.__pieceswght[448:512] = np.asarray([-WEIGHTS['KNIGHT_VALUE']]*64)
-        self.__pieceswght[512:576] = np.asarray([-WEIGHTS['BISHOP_VALUE']]*64)
-        self.__pieceswght[576:640] = np.asarray([-WEIGHTS['ROOK_VALUE']]*64)
-        self.__pieceswght[640:704] = np.asarray([-WEIGHTS['QUEEN_VALUE']]*64)
+        self.__pieceswght[384:448] = np.asarray([WEIGHTS['PAWN_VALUE']]*64)
+        self.__pieceswght[448:512] = np.asarray([WEIGHTS['KNIGHT_VALUE']]*64)
+        self.__pieceswght[512:576] = np.asarray([WEIGHTS['BISHOP_VALUE']]*64)
+        self.__pieceswght[576:640] = np.asarray([WEIGHTS['ROOK_VALUE']]*64)
+        self.__pieceswght[640:704] = np.asarray([WEIGHTS['QUEEN_VALUE']]*64)
         self.__pieceswght[704:773] = np.asarray([0]*69)
 

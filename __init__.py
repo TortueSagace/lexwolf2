@@ -84,7 +84,8 @@ class Game():
     def play_move(self, move):
         self.board.push(move)
         self.bitBrd.setList(self.board)
-        print("Value of next move:", self.bitBrd.getEval())
+        if self.verbose and not self.silence:
+            print("Value of next move:", self.bitBrd.getEval())
 
     def start(self):
         self.message("\n\nTHE GAME HAS STARTED. GOOD LUCK!\n")
@@ -149,7 +150,7 @@ class Game():
         self.message("\nGAME OVER.")
 
     def show_board(self, svg_board=True, size=200):
-        if svg_board:
+        if svg_board and not self.silence:
             svg = chess.svg.board(self.board, size=size)  # Generate SVG for the current board
             display(SVG(svg))  # Display the SVG in Jupyter Notebook
         else:

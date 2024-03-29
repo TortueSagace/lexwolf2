@@ -1,7 +1,7 @@
 import chess
 import chess.svg
 from random import shuffle
-from lexwolf.minmax import DummyLexWolf, LexWolfCore
+from core import DummyLexWolf, LexWolfCore
 from bitBoard import bitBoard
 from IPython.display import display, SVG
 
@@ -17,7 +17,7 @@ class Game():
         self.AIwhite = AIwhite  # type LexWolfCore
         self.AIblack = AIblack
         self.board = chess.Board()
-        self.bitBrd = bitBoard(self.board)             
+        self.bitBrd = bitBoard()
         self.move_memory = []
         self.max_moves = max_moves  # stops the game if > max_moves, inactive if set on "None"
         self.move_count = 0
@@ -29,8 +29,8 @@ class Game():
         self.start()  # starts the game
 
     def AImove(self, AI):
-        next_move = AI.find_optimal_move(self.board)
-        # next_move = AI.find_optimal_movebis(self.board, self.bitBrd)
+        self.show_board(size=500)
+        next_move = AI.find_optimal_move(self.board) if AI.incrEval == False else AI.find_optimal_move_incremental(self.board)
         if next_move in self.board.legal_moves:
             self.load_move_in_memory(next_move)
             self.play_move(next_move)
@@ -82,10 +82,9 @@ class Game():
             print(mes)
 
     def play_move(self, move):
-        if move in self.board.legal_moves:
-            self.board.push(move)
-        else:
-            raise ValueError("Illegal move entered in 'Game.play_move'.")
+        self.board.push(move)
+        self.bitBrd.setList(self.board)
+        print("Value of next move:", self.bitBrd.getEval())
 
     def start(self):
         self.message("\n\nTHE GAME HAS STARTED. GOOD LUCK!\n")
@@ -96,6 +95,7 @@ class Game():
                 self.human_move()
             else:
                 self.AImove(self.AIwhite)
+                self.show_board()
             if self.check_endgame() == 1:
                 # White win
                 self.message(f"Checkmate at move {self.move_count}")
@@ -125,7 +125,6 @@ class Game():
                 self.verbose_message("EXCEEDED MAX ALLOWED MOVES FOR THIS GAME.")
                 break
 
-        self.show_board()
 
         if self.result == 0:
             if self.board.is_insufficient_material():

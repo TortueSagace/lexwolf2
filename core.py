@@ -3,6 +3,7 @@ from time import time
 import chess
 from random import shuffle, seed, randrange, choices, random
 import numpy as np
+from bitBoard import bitBoard
 
 
 class LexWolfCore():
@@ -10,7 +11,10 @@ class LexWolfCore():
     Parent class for all LexWolf chess models.
     """
 
-    def __init__(self, max_depth=3, max_thinking_time=3600.0, random_seed=None, verbose=0):
+    def __init__(self, max_depth=3, max_thinking_time=3600.0, random_seed=None, verbose=0, bruteForce = False,incrementalEvaluation=True):
+        self.incrEval = incrementalEvaluation
+        self.bF = bruteForce
+        self.bitBrd = bitBoard(bruteForce=bruteForce)
         self.is_playing = False
         self.is_defeated = False
         self.is_winner = False
@@ -25,6 +29,9 @@ class LexWolfCore():
             self.max_depth = float('inf')
 
     def find_optimal_move(self, board=chess.Board()):
+        pass
+
+    def find_optimal_move_incremental(self, board=chess.Board()):
         pass
 
     def verbose_message(self, message):
@@ -79,6 +86,11 @@ class DummyLexWolf(LexWolfCore):
         super().__init__(*args, **kwargs)
 
     def find_optimal_move(self, board=chess.Board()):
+        legal_moves = list(board.legal_moves)
+        shuffle(legal_moves)
+        return legal_moves[0]
+
+    def find_optimal_move_incremental(self, board=chess.Board()):
         legal_moves = list(board.legal_moves)
         shuffle(legal_moves)
         return legal_moves[0]

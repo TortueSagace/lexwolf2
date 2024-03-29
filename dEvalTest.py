@@ -19,19 +19,29 @@ if __name__ == "__main__":
             #print("first board, value: ", lastVal)
             #print(board)
             for move in list(board.legal_moves):
-                #time.sleep(5)
                 board.push(move)
                 bboard.setList(board)
                 newVal = bboard.getEval()
                 dVal = bboard.getDeltaEval(lastList, lastVal)
                 #print("new board")
                 #print(board)
-                print("newVal dVal: ",newVal - dVal)
+                #print('newVal; ', newVal)
+                #print("newVal - dVal: ",newVal - dVal)
+                for move in list(board.legal_moves):
+                    board.push(move)
+                    bboard.setList(board)
+                    newVal = bboard.getEval()
+                    dVal = bboard.getDeltaEval(lastList, lastVal)
+                    #print("new board")
+                    #print(board)
+                    #print('newVal; ', newVal)
+                    #print("newVal - dVal: ",newVal - dVal)
+                    board.pop()
                 board.pop()
             board.pop()
 
-profile.dump_stats("res.prof")
+profile.dump_stats("res4.prof")
 
-results = pstats.Stats("res.prof") # use "tuna res.prof" in CLI
+results = pstats.Stats("res4.prof") # use "tuna res.prof" in CLI
 results.sort_stats(pstats.SortKey.TIME)
-print(results)
+#print(results)

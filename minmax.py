@@ -243,8 +243,8 @@ class MinmaxLexWolf(LexWolfCore):
             board.push(move)
             self.bitBrd.setList(board)
             staticVal = self.bitBrd.getDeltaEval(prevList, boardStaticVal)
-            #if(randint(0,1000)==500): # check if no deltaEval ~ getEval discrepancy at regular intervalls
-            self.checkEqual(board, staticVal)
+            if(randint(0,1000)==500): # check if no deltaEval ~ getEval discrepancy at regular intervalls
+                self.checkEqual(board, staticVal)
             lastList =  self.bitBrd.getList()
             self.combinations_count = 1
             board_value = self.minimax_incremental(board, staticVal, lastList, self.max_depth - 1, alpha, beta, not turn)

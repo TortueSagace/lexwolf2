@@ -107,6 +107,9 @@ class bitBoard:
                 indexes.remove(i)
                 indexes.append(i)
 
+        if (len(indexes)>2): #pathological case not worth the headache
+            return self.getEval()        
+
         rankKing = np.asarray(rankKing)
         if(len(indexes)<=1):
             superimposedList = np.zeros(64)
@@ -178,6 +181,7 @@ class bitBoard:
                         prevBboardListneg[j] = 1 
                     ctl = a4*(self.subRookCtl(color, prevBboardListpos, listDiffpos) + self.subRookCtl(color, prevBboardListneg, listDiffneg))    
 
+                #print("white rook ctl: ", ctl)
                 res+=ctl    
 
             elif(i in np.asarray(range(4*64,5*64))): # white queen moved
@@ -228,8 +232,10 @@ class bitBoard:
                     ctl = a4*(self.subRookCtl(color, prevBboardList, listDiffpos) + self.subRookCtl(color, prevBboardListneg, listDiffneg))    
                 res-=ctl  
 
-            elif(i in np.asarray(range(10*64,11*64))): # black queen moved    
+            elif(i in np.asarray(range(10*64,11*64))): # black queen moved  
+                #print("prevBboardList: ",self.sponge(prevBboardList))  
                 ctl = a3*self.subQueenCtl(color, prevBboardList, listDiff[10*64:11*64])
+                #print("black queen ctl: ", ctl)
                 res-=ctl  
 
             elif(i in np.asarray(range(11*64,12*64))): # black king moved
@@ -252,13 +258,16 @@ class bitBoard:
         #print("extrinsic")
 
         wdiffSponge = self.sponge(weightedDiff)
+        #print("diffSponge: ", wdiffSponge)
         prevSponge = self.sponge(prevBboardList)
         dirb1 = [self.strEl.NE, self.strEl.SW]
         dirb2 = [self.strEl.NW, self.strEl.SE]
         dirbis = dirb1 + dirb2
+        bis = self.strEl.Bp
         dirk1 = [self.strEl.S, self.strEl.N]
         dirk2 = [self.strEl.E, self.strEl.W]
         dirrk = dirk1 + dirk2
+        rk = self.strEl.Rk
 
         for k in range(len(wdiffSponge)):
             pivot = wdiffSponge[k]
@@ -288,31 +297,41 @@ class bitBoard:
                 convwp = self.strEl.bP[k]
                 convbis = np.asarray([0]*64)
                 convrk = np.asarray([0]*64)
-                convqn = np.asarray([0]*64)
-                for d in dirbis:
-                    j = 0
-                    while(d[-j][k]@prevSponge>1):
-                        j += 1
-                    convbis += d[-j][k]
-                for d in dirrk:
-                    j = 0
-                    while(d[-j][k]@prevSponge>1):
-                        j += 1
-                    convrk += d[-j][k]    
-                convqn = convbis + convrk
+                bisList = prevBboardList[2*64:3*64]+prevBboardList[8*64:9*64]
+                qnList = prevBboardList[4*64:5*64]+prevBboardList[10*64:11*64]
+                rkList = prevBboardList[3*64:4*64]+prevBboardList[9*64:10*64]
+                
+                nwrk = 0
+                nbrk = 0
+                nwbs = 0
+                nbbs = 0
+                if(bis[k]@(bisList+qnList)):
+                    for d in dirbis:
+                        j = 0
+                        while(d[-j][k]@prevSponge>1):
+                            j += 1
+                        convbis += d[-j][k]
+                    nwbs = convbis@prevBboardList[2*64:3*64]
+                    nbbs = convbis@prevBboardList[8*64:9*64]    
+                if(rk[k]@(rkList+qnList)):        
+                    for d in dirrk:
+                        j = 0
+                        while(d[-j][k]@prevSponge>1):
+                            j += 1
+                        convrk += d[-j][k]    
+                    nwrk = convrk@prevBboardList[3*64:4*64]
+                    nbrk = convrk@prevBboardList[9*64:10*64]    
 
                 nwkg = convkg@prevBboardList[5*64:6*64]
                 nbkg = convkg@prevBboardList[11*64:12*64]
                 nwkn = convkn@prevBboardList[1*64:2*64]
                 nbkn = convkn@prevBboardList[7*64:8*64]
-                nwbs = convbis@prevBboardList[2*64:3*64]
-                nbbs = convbis@prevBboardList[8*64:9*64]
-                nwrk = convrk@prevBboardList[3*64:4*64]
-                nbrk = convrk@prevBboardList[9*64:10*64]
-                nwq = convqn@prevBboardList[4*64:5*64]
-                nbq = convqn@prevBboardList[10*64:11*64]
                 nwp = convwp@prevBboardList[0:64]
                 nbp = convbp@prevBboardList[6*64:7*64]
+
+                convqn = convbis + convrk
+                nwq = convqn@prevBboardList[4*64:5*64]
+                nbq = convqn@prevBboardList[10*64:11*64]
 
                 npieces = [nwkg,nbkg,nwkn,nbkn,nwbs,nbbs,nwrk,nbrk,nwq,nbq,nwp,nbp]
 

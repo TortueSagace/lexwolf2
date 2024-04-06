@@ -23,10 +23,76 @@ class Game():
         self.move_count = 0
         self.result = 0  # -1 --> black, 0 --> draw, 1 --> white
         self.result_cause = 'Checkmate'
+        self.create_opening_library()
         self.verbose = verbose
         self.silence = silence
 
         self.start()  # starts the game
+
+    def create_opening_library(self, path="lexwolf/openings.csv", output_path="lexwolf/openings_fen.csv"):
+        """
+        The idea is to build a csv database from another csv file. The source csv file contains lists of opening moves
+        in the column 'moves_list', e.g. "['1.e4', 'Nf6', '2.e5', 'Nd5', '3.d4', 'd6', '4.Bc4']" and a winning percentage
+        in the column 'Player Win %'. The input are those two columns.
+        The output is a csv file that, for each fen position, tells what is the best move to play according to the
+        opening database. The output csv file will have the following columns: 'fen', 'best_move', 'winning_percentage'.
+        The 'best_move' format shall be in the format 'e2e4' instead of '1.e4', so that it can be used by the AI.
+        """
+        # Check if the output csv file already exists
+        if os.path.exists(output_path):
+            print(f"File {output_path} already exists. Please remove it or choose another file name.")
+            return
+
+        # Read the source csv file
+        openings_lists_csv = pd.read_csv(path)
+        # Initialize the output DataFrame
+        openings_fen_csv = pd.DataFrame(columns=['fen', 'best_move', 'winning_percentage'])
+
+        # Temporary dictionary to hold FEN positions and their moves with winning percentages
+        fen_dict = {}
+
+        for _, row in openings_lists_csv.iterrows():
+            moves_list = eval(row['moves_list'])
+            win_percentage = row['Player Win %']
+            board = chess.Board()
+
+            for move in moves_list:
+                # Convert move to move object
+                try:
+                    move_obj = board.parse_san(move)
+                except ValueError:
+                    # If move can't be parsed, it might be an invalid move or not applicable in the current board state
+                    break
+
+                board.push(move_obj)
+
+                # Convert to FEN
+                fen = board.fen()
+
+                # Determine move in long algebraic notation
+                move_lan = board.san(move_obj)
+
+                # Update or add the move and win percentage to the dictionary
+                if fen not in fen_dict:
+                    fen_dict[fen] = []
+                fen_dict[fen].append((move_lan, win_percentage))
+
+                # Prepare for next iteration
+                board = chess.Board(fen)
+
+        # Process the dictionary to find the best move for each FEN
+        for fen, moves_win_percs in fen_dict.items():
+            best_move, winning_percentage = max(moves_win_percs, key=lambda x: x[1])
+            # Convert best move to long algebraic notation if necessary
+            board = chess.Board(fen)
+            best_move_lan = board.san(board.parse_san(best_move))
+            # Append to the DataFrame
+            openings_fen_csv = openings_fen_csv.append({'fen': fen, 'best_move': best_move_lan, 'winning_percentage': winning_percentage}, ignore_index=True)
+
+        # Write the DataFrame to a new CSV file
+        openings_fen_csv.to_csv(output_path, index=False)
+        print(f"Opening library created and saved to {output_path}.")
+
 
     def AImove(self, AI):
         self.show_board(size=500)

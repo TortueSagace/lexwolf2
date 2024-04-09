@@ -1,0 +1,16 @@
+class OpeningMinmaxLexWolf(MinmaxLexWolf):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+    def find_optimal_move_incremental(self, board=chess.Board()):
+        self.find_optimal_move(board)
+
+    def find_optimal_move(self, board=chess.Board()):
+        current_fen = board.fen()
+        possible_moves = op[op['fen'].str.startswith(current_fen)]
+        next_move = possible_moves.iloc[0]['best_move']
+        if next_move is not None:
+            print(chess.Move.from_uci(next_move))
+            return chess.Move.from_uci(next_move)
+        else:
+            super().find_optimal_move(board)

@@ -1,3 +1,3 @@
 # lexwolf2
 
-Library for chess bots AIs.
+Library for chess bots.
